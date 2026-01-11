@@ -90,7 +90,7 @@
         }
 
         .logo-container img {
-            height: 60px;
+            height: 90px;
         }
     </style>
 </head>
@@ -111,37 +111,43 @@
     </div>
 
     <form action="{{ route('members.update', $member->id) }}" method="POST" enctype="multipart/form-data">
-        @csrf
-        @method('PUT')
+    @csrf
+    @method('PUT')
 
-        <label>Full Name</label>
-        <input type="text" name="full_name" value="{{ $member->full_name }}" required>
+    <label>Full Name</label>
+    <input type="text" name="full_name" value="{{ $member->full_name }}" required>
 
-        <label>Facebook Name</label>
-        <input type="text" name="facebook_name" value="{{ $member->facebook_name }}" required>
+    <label>Facebook Name</label>
+    <input type="text" name="facebook_name" value="{{ $member->facebook_name }}" required>
 
-        <label>Email</label>
-        <input type="email" name="email" value="{{ $member->email }}" required>
+    <label>Email</label>
+    <input type="email" name="email" value="{{ $member->email }}" required>
 
-        <label>Membership Plan</label>
-        <select name="membership_plan" required>
-            <option value="monthly" {{ $member->membership_plan == 'monthly' ? 'selected' : '' }}>Monthly</option>
-            <option value="3-months" {{ $member->membership_plan == '3-months' ? 'selected' : '' }}>3 Months</option>
-            <option value="6-months" {{ $member->membership_plan == '6-months' ? 'selected' : '' }}>6 Months</option>
-        </select>
+    <label>Membership Package</label>
+    <select name="membership_package" required>
+        <!-- UNLI PASS -->
+        <option value="unli_1_month" {{ $member->membership_type == 'unli_1_month' ? 'selected' : '' }}>Unli 1 Month</option>
+        <option value="unli_3_months" {{ $member->membership_type == 'unli_3_months' ? 'selected' : '' }}>Unli 3 Months</option>
+        <option value="unli_6_months" {{ $member->membership_type == 'unli_6_months' ? 'selected' : '' }}>Unli 6 Months</option>
 
-        <!-- NEW FIELDS -->
-        <label>Membership Start Date</label>
-        <input type="date" name="membership_start" value="{{ $member->membership_start }}">
+        <!-- PROFESSIONAL TRAINING -->
+        <option value="pt_package_a" {{ $member->membership_type == 'pt_package_a' ? 'selected' : '' }}>PT Package A</option>
+        <option value="pt_package_b" {{ $member->membership_type == 'pt_package_b' ? 'selected' : '' }}>PT Package B</option>
+        <option value="pt_package_c" {{ $member->membership_type == 'pt_package_c' ? 'selected' : '' }}>PT Package C</option>
 
-        <label>Membership End Date</label>
-        <input type="date" name="membership_end" value="{{ $member->membership_end }}">
+        <!-- BOXING/MUAY THAI -->
+        <option value="boxing_package_a" {{ $member->membership_type == 'boxing_package_a' ? 'selected' : '' }}>Boxing Package A</option>
+        <option value="boxing_package_b" {{ $member->membership_type == 'boxing_package_b' ? 'selected' : '' }}>Boxing Package B</option>
+        <option value="boxing_package_c" {{ $member->membership_type == 'boxing_package_c' ? 'selected' : '' }}>Boxing Package C</option>
+    </select>
 
-        <label>Change ID Photo (optional)</label>
-        <input type="file" name="id_photo">
+    <!-- Optional: Change ID Photo -->
+    <label>Change ID Photo (optional)</label>
+    <input type="file" name="id_photo">
 
-        <button class="btn-submit">Save Changes</button>
-    </form>
+    <button class="btn-submit">Save Changes</button>
+</form>
+
 
     <a class="back" href="{{ route('members.show', $member->id) }}">Back to Profile</a>
 </div>

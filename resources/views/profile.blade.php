@@ -21,16 +21,17 @@
             display: flex;
             justify-content: center;
             margin-bottom: 25px;
+
         }
 
         .logo-container img {
-            height: 60px;
+            height: 90px;
         }
 
         .back-btn {
             text-decoration: none;
             color: #000;
-            background: #ffb600;
+            background:#FFD700;
             padding: 10px 18px;
             font-weight: bold;
             border-radius: 10px;
@@ -38,7 +39,7 @@
             margin-bottom: 20px;
         }
         .back-btn:hover {
-            background: #ffc533;
+            background: #FFD700;
         }
 
         .profile-wrapper {
@@ -56,7 +57,7 @@
 
         .title {
             font-size: 22px;
-            color: #ffb600;
+            color: #FFD700;
             margin-bottom: 15px;
         }
 
@@ -75,7 +76,7 @@
         }
         .info-list span {
             font-weight: bold;
-            color: #ffb600;
+            color: #FFD700;
         }
 
         .actions {
@@ -100,12 +101,12 @@
 </head>
 
 <body>
-    <!--Fitcamp logo -->
+    <!-- Fitcamp logo -->
     <div class="logo-container">
         <img src="{{ asset('images/fitcamp-logo.png') }}" alt="FitCamp Logo">
     </div>
 
-    <!--Back to Profile-->
+    <!-- Back to Dashboard -->
     <a href="{{ route('admin.dashboard') }}" class="back-btn"> Back to Dashboard</a>
 
     <div class="profile-wrapper">
@@ -116,7 +117,7 @@
 
             <img
                 src="{{ $member->id_photo ? asset('storage/' . $member->id_photo) : asset('images/default.png') }}"
-                class="id-photo">
+                class="id-photo" alt="ID Photo">
         </div>
 
         <!-- PERSONAL INFO -->
@@ -134,10 +135,10 @@
         <div class="card">
             <h2 class="title">Membership Details</h2>
             <div class="info-list">
-                <p><span>Plan:</span> {{ ucfirst($member->membership_plan) }}</p>
+                <p><span>Plan:</span> {{ ucwords(str_replace('_', ' ', $member->membership_type)) }}</p>
                 <p><span>Status:</span> {{ $member->status }}</p>
-                <p><span>Start Date:</span> {{ $member->start_date }}</p>
-                <p><span>End Date:</span> {{ $member->end_date }}</p>
+                <p><span>Start Date:</span> {{ \Carbon\Carbon::parse($member->start_date)->format('F j, Y') }}</p>
+                <p><span>End Date:</span> {{ \Carbon\Carbon::parse($member->end_date)->format('F j, Y') }}</p>
             </div>
         </div>
 

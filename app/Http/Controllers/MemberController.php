@@ -7,6 +7,7 @@ use App\Models\Member; // Make sure this model exists
 use Illuminate\Support\Str; // Required if you use Str::slug for filenames
 use Illuminate\Support\Facades\Storage;
 use function Ramsey\Uuid\v1;
+use Carbon\Carbon;
 
 class MemberController extends Controller
 {
@@ -16,7 +17,6 @@ class MemberController extends Controller
      */
    public function index(Request $request)
 {
-    // Start query
     $members = Member::query();
 
     // SEARCH
@@ -35,8 +35,14 @@ class MemberController extends Controller
     // Order newest first
     $members = $members->orderBy('created_at', 'desc')->get();
 
-    return view('admin', compact('members'));
+    // Mapping for friendly membership names
+    $membershipLabels = $this->membershipLabels();
+
+    // ✅ Only one return statement
+    return view('dashboard', compact('members', 'membershipLabels'));
 }
+
+
 
 
     /**
@@ -57,72 +63,96 @@ class MemberController extends Controller
     }
 
 
-    public function store(Request $request)
-    {
-        // 1. VALIDATION
-        $request->validate([
-            'full_name' => 'required|string|max:255',
-            'facebook_name' => 'required|string|max:255',
-            // Ensure email is unique in the 'members' table
-            'email' => 'required|email|unique:members,email|max:255',
-            'membership_plan' => 'required|in:monthly,3-months,6-months',
-            // Image validation: required, must be an image, specific types, max 2MB
-            'id_photo' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-        ]);
+      public function store(Request $request)
+{
+    $request->validate([
+        'full_name' => 'required|string',
+        'facebook_name' => 'required|string',
+        'email' => 'required|email|unique:members, email',
+        'membership_package' => 'required|string', // radio button
+        'id_photo' => 'required|image',
+    ]);
 
-        // 2. COMPUTE MEMBERSHIP END DATE
-        $start = now();
-        $months = match ($request->membership_plan) {
-            'monthly' => 1,
-            '3-months' => 3,
-            default => 6, // '6-months' is the default case
-        };
-        $end = now()->addMonths($months);
+    // UPLOAD ID PHOTO
+    $id_photo_path = $request->file('id_photo')->store('id_photos', 'public');
 
-        // 3. UPLOAD THE ID PHOTO
-        $id_photo_path = null;
-        if ($request->hasFile('id_photo')) {
-            $file = $request->file('id_photo');
+    // GENERATE MEMBER ID
+    $lastMember = Member::orderBy('id', 'desc')->first();
+    $lastNumber = $lastMember ? intval(substr($lastMember->member_id, 4)) : 0;
+    $memberID = 'FIT-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
 
-            // This is the recommended Laravel way:
-            // The file will be stored in 'storage/app/public/id_photos'
-            // and the function returns the relative path (e.g., 'id_photos/unique_hash.jpg').
-            $id_photo_path = $file->store('id_photos', 'public');
+   //Membership Rules
 
-        }
+   $packages=[
 
-        // 4. CREATE UNIQUE MEMBER ID
-        // // Get last member by descending member_id
-$lastMember = Member::orderBy('id', 'desc')->first();
-$lastNumber = $lastMember ? intval(substr($lastMember->member_id, 4)) : 0;
-$memberID = 'FIT-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+   //UNLI PASS
+    'unli_1_month'=> 30,
+    'unli_3_months'=> 90,
+    'unli_6_months'=> 180,
 
+    //PROFESSIONAL TRAINING
+    'pt_package_a'=> 20,
+    'pt_package_b'=> 60,
+    'pt_package_c'=> 150,
 
-        // 5. SAVE TO DATABASE
-        Member::create([
-            'member_id' => $memberID,
-            'full_name' => $request->full_name,
-            'facebook_name' => $request->facebook_name,
-            'email' => $request->email,
-            'membership_plan' => $request->membership_plan,
-            // Save the path returned by the store() function
-            'id_photo' => $id_photo_path,
-            'start_date' => $start,
-            'end_date' => $end,
-            'status' => 'active',
-        ]);
+    //BOXING/MUAY THAI
+      'boxing_package_a'=> 20,
+      'boxing_package_b'=> 60,
+      'boxing_package_c'=> 150,
+
+   ];
+
+     $validDays=$packages[$request->membership_package];
+
+     $startDate= Carbon::today();
+     $endDate=$startDate->copy()->addDays($validDays);
 
 
-        // Redirect to the success page
-        return redirect()->route('member.success')->with('status');
-    }
+    // SAVE TO DATABASE
+    Member::create([
+        'member_id' => $memberID,
+        'full_name' => $request->full_name,
+        'facebook_name' => $request->facebook_name,
+        'email' => $request->email,
+        'membership_type' => $request->membership_package, // ✅ just save the radio value
+        'valid_days' =>$validDays,
+         'start_date'=>$startDate,
+         'end_date' =>$endDate,
+        'id_photo' => $id_photo_path,
+        'status' => 'Active',
+    ]);
+
+    return redirect()->route('member.success')->with('status', 'You have successfully registered!');
+}
+
+private function membershipLabels()
+{
+    return [
+        // UNLI PASS
+        'unli_1_month'   => '1 Month – ₱600',
+        'unli_3_months'  => '3 Months – ₱1,200',
+        'unli_6_months'  => '6 Months – ₱2,200',
+
+        // PROFESSIONAL TRAINING
+        'pt_package_a'   => 'Package A – 6 Sessions (₱1,200)',
+        'pt_package_b'   => 'Package B – 11 + 1 Free (₱2,200)',
+        'pt_package_c'   => 'Package C – 24 + 5 Free (₱4,800)',
+
+        // BOXING / MUAY THAI
+        'boxing_package_a' => 'Package A – 6 Sessions (₱1,500)',
+        'boxing_package_b' => 'Package B – 11 + 1 Free (₱2,700)',
+        'boxing_package_c' => 'Package C – 24 + 5 Free (₱5,700)',
+    ];
+}
+
+
 
     public function edit($id){
         $member=Member::findOrFail($id);
         return view('edit-member', compact('member'));
     }
 
-    public function update(Request $request, $id)
+  public function update(Request $request, $id)
 {
     $member = Member::findOrFail($id);
 
@@ -131,31 +161,42 @@ $memberID = 'FIT-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
         'full_name' => 'required|string|max:255',
         'facebook_name' => 'required|string|max:255',
         'email' => 'required|email|max:255|unique:members,email,' . $id,
-        'membership_plan' => 'required|in:monthly,3-months,6-months',
-        'id_photo' => 'image|mimes:jpeg,png,jpg|max:2048',
+        'membership_package' => 'required|string', // matches store()
+        'id_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
     ]);
 
-    // Update membership dates if plan changes
-    if ($request->membership_plan !== $member->membership_plan) {
-        $months = match ($request->membership_plan) {
-            'monthly' => 1,
-            '3-months' => 3,
-            default => 6,
-        };
+    // Membership packages (same as store)
+    $packages = [
+        // UNLI PASS
+        'unli_1_month' => 30,
+        'unli_3_months' => 90,
+        'unli_6_months' => 180,
 
-        $member->start_date = now();
-        $member->end_date = now()->addMonths($months);
+        // PROFESSIONAL TRAINING
+        'pt_package_a' => 20,
+        'pt_package_b' => 60,
+        'pt_package_c' => 150,
+
+        // BOXING/MUAY THAI
+        'boxing_package_a' => 20,
+        'boxing_package_b' => 60,
+        'boxing_package_c' => 150,
+    ];
+
+    // Recalculate membership dates if package changes
+    if ($request->membership_package !== $member->membership_type) {
+        $validDays = $packages[$request->membership_package] ?? 30; // fallback 30 days
+        $member->start_date = Carbon::today();
+        $member->end_date = Carbon::today()->addDays($validDays);
+        $member->valid_days = $validDays;
+        $member->membership_type = $request->membership_package;
     }
 
-    // Update ID photo
+    // Update ID photo if new file uploaded
     if ($request->hasFile('id_photo')) {
-
-        // Delete old photo
         if ($member->id_photo && Storage::disk('public')->exists($member->id_photo)) {
             Storage::disk('public')->delete($member->id_photo);
         }
-
-        // Save new one
         $member->id_photo = $request->file('id_photo')->store('id_photos', 'public');
     }
 
@@ -163,15 +204,15 @@ $memberID = 'FIT-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
     $member->full_name = $request->full_name;
     $member->facebook_name = $request->facebook_name;
     $member->email = $request->email;
-    $member->membership_plan = $request->membership_plan;
 
-    // Save everything
+    // Save changes
     $member->save();
 
     return redirect()
         ->route('members.show', $member->id)
-        ->with('success', 'Member updated successfully!');
+        ->with('status', 'Member updated successfully!');
 }
+
 
 
     /**
@@ -194,6 +235,6 @@ $memberID = 'FIT-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
     }
 
 
- 
+
 
 }

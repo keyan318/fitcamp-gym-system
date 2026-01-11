@@ -11,14 +11,16 @@ class Member extends Model
 
     // Add these fields to allow mass assignment
     protected $fillable = [
-        'member_id',
-        'full_name',
-        'facebook_name',
-        'email',
-        'membership_plan',
-        'id_photo',
-        'start_date',
-        'end_date',
-        'status',
-    ];
+    'member_id',
+    'full_name',
+    'facebook_name',
+    'email',
+    'membership_type',
+    'valid_days',
+    'start_date',
+    'end_date',
+    'id_photo',
+    'status',
+];
+
 }
