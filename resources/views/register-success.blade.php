@@ -84,7 +84,7 @@
         <img src="{{ asset('images/fitcamp-logo.png') }}" alt="FitCamp Logo">
     </div>
 
-    <h1>Member Registered Successfully!</h1>
+    <h1>Registered Successfully!</h1>
     @if(session('status'))
         <p>{{ session('status') }}</p>
     @endif

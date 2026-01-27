@@ -10,11 +10,17 @@ use Carbon\Carbon;
 
 class AdminController extends Controller
 {
+    /* ==========================
+       SHOW LOGIN FORM
+    ========================== */
     public function showLoginForm()
     {
         return view('admin.login');
     }
 
+    /* ==========================
+       ADMIN LOGIN
+    ========================== */
     public function login(Request $request)
     {
         $request->validate([
@@ -22,29 +28,39 @@ class AdminController extends Controller
             'password' => 'required',
         ]);
 
-        // Get credentials from .env
-        $username = env('ADMIN_USERNAME', 'fitcamp_admin'); // fallback username
+        // Admin credentials from .env
+        $username = env('ADMIN_USERNAME', 'fitcamp_admin');
         $hashedPassword = env('ADMIN_PASSWORD', password_hash('password123', PASSWORD_BCRYPT));
 
-        // Rate-limiting to prevent brute force
-        $ip = $request->ip();
-        if (RateLimiter::tooManyAttempts($ip, 5)) {
-            return back()->withErrors(['Too many login attempts. Please try again in a few minutes.']);
+        // Unique rate-limit key (per IP + username)
+        $throttleKey = strtolower($request->username) . '|' . $request->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            return back()->withErrors([
+                'Too many login attempts. Please try again in a few minutes.'
+            ]);
         }
 
-        // Check credentials
-        if ($request->username === $username && password_verify($request->password, $hashedPassword)) {
+        if (
+            $request->username === $username &&
+            password_verify($request->password, $hashedPassword)
+        ) {
             Session::put('is_admin', true);
-            RateLimiter::clear($ip);
-            return redirect()->route('admin.dashboard');
+            RateLimiter::clear($throttleKey);
+
+            return redirect()->route('admin.mainDashboard');
         }
 
-        RateLimiter::hit($ip, 60); // lockout for 60 seconds
+        RateLimiter::hit($throttleKey, 60); // lock for 60 seconds
         return back()->withErrors(['Invalid username or password']);
     }
-public function dashboard(Request $request)
+
+    /* ==========================
+       ADMIN DASHBOARD / PROFILE
+    ========================== */
+    public function dashboard(Request $request)
     {
-        // Protect dashboard
+        // Protect route
         if (!Session::get('is_admin')) {
             return redirect()->route('admin.login');
         }
@@ -54,10 +70,9 @@ public function dashboard(Request $request)
             ->where('status', 'Active')
             ->update(['status' => 'Expired']);
 
-        // Start query
         $members = Member::query();
 
-        // 🔍 SEARCH (Full Name / Facebook Name / Member ID)
+        // 🔍 SEARCH
         if ($request->filled('search')) {
             $members->where(function ($q) use ($request) {
                 $q->where('full_name', 'like', '%' . $request->search . '%')
@@ -66,25 +81,34 @@ public function dashboard(Request $request)
             });
         }
 
-        // 🟢 FILTER (Active / Expired)
+        // 🟢 FILTER
         if ($request->filled('filter') && $request->filter !== 'all') {
             $members->where('status', ucfirst($request->filter));
         }
 
-        // Final fetch
         $members = $members->orderBy('created_at', 'desc')->get();
-
         $membershipLabels = $this->membershipLabels();
 
-        return view('admin.dashboard', compact('members', 'membershipLabels'));
+        return view('admin.profile', compact('members', 'membershipLabels'));
     }
 
-    public function logout()
+    /* ==========================
+       ADMIN LOGOUT
+    ========================== */
+    public function logout(Request $request)
     {
         Session::forget('is_admin');
+        Session::flush();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()->route('admin.login');
     }
 
+    /* ==========================
+       MEMBERSHIP LABELS
+    ========================== */
     private function membershipLabels()
     {
         return [
@@ -100,4 +124,12 @@ public function dashboard(Request $request)
         ];
     }
 
+    /* ==========================
+       ATTENDANCE PAGE
+    ========================== */
+    public function attendance()
+    {
+        $members = Member::latest()->get();
+        return view('attendance.index', compact('members'));
+    }
 }

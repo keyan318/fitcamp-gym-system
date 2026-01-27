@@ -1,13 +1,12 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-  />
+
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
 <title>FitCamp Membership Registration</title>
 
 <style>
@@ -50,7 +49,6 @@ h1 {
     text-align: center;
     margin-bottom: 30px;
     font-size: 30px;
-    color: #fff;
     font-weight: 700;
 }
 
@@ -84,7 +82,6 @@ input:focus {
 }
 
 .membership-title {
-    color: #fff;
     font-size: 18px;
     margin: 25px 0 15px;
     font-weight: bold;
@@ -135,13 +132,16 @@ button {
 
 <div class="form-container">
     <div class="logo-container">
-        <img src="{{ asset('images/fitcamp-logo.png') }}" alt="FitCamp Logo" class="animate__animated animate__backInDown">
+        <img src="{{ asset('images/fitcamp-logo.png') }}"
+             alt="FitCamp Logo"
+             class="animate__animated animate__backInDown">
     </div>
 
     <h1 class="animate__animated animate__zoomIn">Gym Membership</h1>
 
-
-    <form method="POST" action="{{ route('member.store') }}" enctype="multipart/form-data">
+    <form method="POST"
+          action="{{ route('member.store') }}"
+          enctype="multipart/form-data">
         @csrf
 
         <label>Full Name</label>
@@ -156,45 +156,47 @@ button {
         <!-- MEMBERSHIP SELECTION -->
         <div class="membership-section">
 
+           
+
             <div class="membership-title">UNLI PASS</div>
             <label class="package">
-                <input type="radio" name="membership_package" value="unli_1_month" required>
+                <input type="checkbox" name="membership_package[]" value="unli_1_month">
                 <span>1 Month – ₱600</span>
             </label>
             <label class="package">
-                <input type="radio" name="membership_package" value="unli_3_months">
+                <input type="checkbox" name="membership_package[]" value="unli_3_months">
                 <span>3 Months – ₱1,200</span>
             </label>
             <label class="package">
-                <input type="radio" name="membership_package" value="unli_6_months">
+                <input type="checkbox" name="membership_package[]" value="unli_6_months">
                 <span>6 Months – ₱2,200</span>
             </label>
 
             <div class="membership-title">Exclusive Professional Training</div>
             <label class="package">
-                <input type="radio" name="membership_package" value="pt_package_a">
+                <input type="checkbox" name="membership_package[]" value="pt_package_a">
                 <span>Package A – 6 Sessions (₱1,200)</span>
             </label>
             <label class="package">
-                <input type="radio" name="membership_package" value="pt_package_b">
+                <input type="checkbox" name="membership_package[]" value="pt_package_b">
                 <span>Package B – 11 + 1 Free (₱2,200)</span>
             </label>
             <label class="package">
-                <input type="radio" name="membership_package" value="pt_package_c">
+                <input type="checkbox" name="membership_package[]" value="pt_package_c">
                 <span>Package C – 24 + 5 Free (₱4,800)</span>
             </label>
 
             <div class="membership-title">Boxing / Muay Thai</div>
             <label class="package">
-                <input type="radio" name="membership_package" value="boxing_package_a">
+                <input type="checkbox" name="membership_package[]" value="boxing_package_a">
                 <span>Package A – 6 Sessions (₱1,500)</span>
             </label>
             <label class="package">
-                <input type="radio" name="membership_package" value="boxing_package_b">
+                <input type="checkbox" name="membership_package[]" value="boxing_package_b">
                 <span>Package B – 11 + 1 Free (₱2,700)</span>
             </label>
             <label class="package">
-                <input type="radio" name="membership_package" value="boxing_package_c">
+                <input type="checkbox" name="membership_package[]" value="boxing_package_c">
                 <span>Package C – 24 + 5 Free (₱5,700)</span>
             </label>
 
@@ -206,17 +208,32 @@ button {
         <button type="submit">Register Now</button>
         <p class="form-note">Join FitCamp today and start your transformation!</p>
     </form>
-    @if ($errors->any())
-    <div style="background:#ff000033; color:#fff; padding:10px; border-radius:8px; margin-bottom:15px;">
-        <ul>
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
 
+    @if ($errors->any())
+        <div style="background:#ff000033;color:#fff;padding:10px;border-radius:8px;margin-top:15px;">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 </div>
+
+<!-- LIMIT TO 2 MEMBERSHIPS -->
+<script>
+const checkboxes = document.querySelectorAll('input[name="membership_package[]"]');
+
+checkboxes.forEach(box => {
+    box.addEventListener('change', () => {
+        const checked = document.querySelectorAll('input[name="membership_package[]"]:checked');
+        if (checked.length > 2) {
+            box.checked = false;
+            alert('You can only select up to 2 memberships.');
+        }
+    });
+});
+</script>
 
 </body>
 </html>

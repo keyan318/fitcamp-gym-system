@@ -16,11 +16,13 @@ class Member extends Model
     'facebook_name',
     'email',
     'membership_type',
+    'additional_membership',
     'valid_days',
     'start_date',
     'end_date',
     'id_photo',
     'status',
+
 ];
 
 }

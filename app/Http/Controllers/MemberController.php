@@ -3,50 +3,42 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Member; // Make sure this model exists
-use Illuminate\Support\Str; // Required if you use Str::slug for filenames
+use App\Models\Member;
 use Illuminate\Support\Facades\Storage;
-use function Ramsey\Uuid\v1;
 use Carbon\Carbon;
 
 class MemberController extends Controller
 {
     /**
-     * Admin Dashboard: Display a listing of the members.
-     * Fetches all members and passes them to the 'admin' view.
+     * Admin Dashboard
      */
-   public function index(Request $request)
-{
-    $members = Member::query();
+    public function index(Request $request)
+    {
+        $query = Member::query();
 
-    // SEARCH
-    if ($request->search) {
-        $members->where(function($q) use ($request) {
-            $q->where('full_name', 'like', '%' . $request->search . '%')
-              ->orWhere('facebook_name', 'like', '%' . $request->search . '%');
-        });
+        // 🔍 SEARCH
+        if ($request->search) {
+            $query->where(function ($q) use ($request) {
+                $q->where('full_name', 'like', '%' . $request->search . '%')
+                  ->orWhere('facebook_name', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // 🎯 FILTER
+        if ($request->filter && $request->filter !== 'all') {
+            $query->where('status', $request->filter);
+        }
+
+        // ✅ ORDER LIKE ATTENDANCE (FIT-0001 → FIT-0002 → LAST)
+        $members = $query->orderBy('member_id', 'asc')->get();
+
+        $membershipLabels = $this->membershipLabels();
+
+        return view('dashboard', compact('members', 'membershipLabels'));
     }
-
-    // FILTER (Active / Expired)
-    if ($request->filter && $request->filter != 'all') {
-        $members->where('status', $request->filter);
-    }
-
-    // Order newest first
-    $members = $members->orderBy('created_at', 'desc')->get();
-
-    // Mapping for friendly membership names
-    $membershipLabels = $this->membershipLabels();
-
-    // ✅ Only one return statement
-    return view('dashboard', compact('members', 'membershipLabels'));
-}
-
-
-
 
     /**
-     * Show registration form: Display the member registration form.
+     * Show registration form
      */
     public function create()
     {
@@ -54,187 +46,148 @@ class MemberController extends Controller
     }
 
     /**
-     * Handle form submission: Store a newly created member in storage.
+     * Show ID
      */
-
-    public function show($id){
-        $member=Member::findOrFail(($id));
-        return view('profile', compact('member'));
+    public function show($id)
+    {
+        $member = Member::findOrFail($id);
+        return view('id', compact('member'));
     }
 
+    /**
+     * Store member
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'full_name' => 'required|string',
+            'facebook_name' => 'required|string',
+            'email' => 'required|email|unique:members,email',
+            'membership_package' => 'required|array|min:1|max:2',
+            'membership_package.*' => 'string',
+            'id_photo' => 'required|image',
+        ]);
 
-      public function store(Request $request)
-{
-    $request->validate([
-        'full_name' => 'required|string',
-        'facebook_name' => 'required|string',
-        'email' => 'required|email|unique:members, email',
-        'membership_package' => 'required|string', // radio button
-        'id_photo' => 'required|image',
-    ]);
+        $id_photo_path = $request->file('id_photo')->store('id_photos', 'public');
 
-    // UPLOAD ID PHOTO
-    $id_photo_path = $request->file('id_photo')->store('id_photos', 'public');
+        // GENERATE MEMBER ID 
+        $lastMember = Member::orderBy('id', 'desc')->first();
+        $lastNumber = $lastMember ? intval(substr($lastMember->member_id, 4)) : 0;
+        $memberID = 'FIT-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
 
-    // GENERATE MEMBER ID
-    $lastMember = Member::orderBy('id', 'desc')->first();
-    $lastNumber = $lastMember ? intval(substr($lastMember->member_id, 4)) : 0;
-    $memberID = 'FIT-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+        $packages = [
+            'unli_1_month' => 30,
+            'unli_3_months' => 90,
+            'unli_6_months' => 180,
+            'pt_package_a' => 20,
+            'pt_package_b' => 60,
+            'pt_package_c' => 150,
+            'boxing_package_a' => 20,
+            'boxing_package_b' => 60,
+            'boxing_package_c' => 150,
+        ];
 
-   //Membership Rules
+        $selected = $request->membership_package;
+        $mainMembership = $selected[0];
+        $additionalMembership = $selected[1] ?? null;
 
-   $packages=[
+        $validDays = $packages[$mainMembership];
+        $startDate = Carbon::today();
 
-   //UNLI PASS
-    'unli_1_month'=> 30,
-    'unli_3_months'=> 90,
-    'unli_6_months'=> 180,
+        if (str_starts_with($mainMembership, 'unli_')) {
+            $endDate = $startDate->copy()->addMonthNoOverflow()->endOfDay();
+        } else {
+            $endDate = $startDate->copy()->addDays($validDays)->endOfDay();
+        }
 
-    //PROFESSIONAL TRAINING
-    'pt_package_a'=> 20,
-    'pt_package_b'=> 60,
-    'pt_package_c'=> 150,
+        Member::create([
+            'member_id' => $memberID,
+            'full_name' => $request->full_name,
+            'facebook_name' => $request->facebook_name,
+            'email' => $request->email,
+            'membership_type' => $mainMembership,
+            'additional_membership' => $additionalMembership,
+            'valid_days' => $validDays,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'id_photo' => $id_photo_path,
+            'status' => 'Active',
+        ]);
 
-    //BOXING/MUAY THAI
-      'boxing_package_a'=> 20,
-      'boxing_package_b'=> 60,
-      'boxing_package_c'=> 150,
+        return redirect()->route('member.success')
+            ->with('status', 'You have successfully registered!');
+    }
 
-   ];
-
-     $validDays=$packages[$request->membership_package];
-
-     $startDate= Carbon::today();
-     $endDate=$startDate->copy()->addDays($validDays);
-
-
-    // SAVE TO DATABASE
-    Member::create([
-        'member_id' => $memberID,
-        'full_name' => $request->full_name,
-        'facebook_name' => $request->facebook_name,
-        'email' => $request->email,
-        'membership_type' => $request->membership_package, // ✅ just save the radio value
-        'valid_days' =>$validDays,
-         'start_date'=>$startDate,
-         'end_date' =>$endDate,
-        'id_photo' => $id_photo_path,
-        'status' => 'Active',
-    ]);
-
-    return redirect()->route('member.success')->with('status', 'You have successfully registered!');
-}
-
-private function membershipLabels()
-{
-    return [
-        // UNLI PASS
-        'unli_1_month'   => '1 Month – ₱600',
-        'unli_3_months'  => '3 Months – ₱1,200',
-        'unli_6_months'  => '6 Months – ₱2,200',
-
-        // PROFESSIONAL TRAINING
-        'pt_package_a'   => 'Package A – 6 Sessions (₱1,200)',
-        'pt_package_b'   => 'Package B – 11 + 1 Free (₱2,200)',
-        'pt_package_c'   => 'Package C – 24 + 5 Free (₱4,800)',
-
-        // BOXING / MUAY THAI
-        'boxing_package_a' => 'Package A – 6 Sessions (₱1,500)',
-        'boxing_package_b' => 'Package B – 11 + 1 Free (₱2,700)',
-        'boxing_package_c' => 'Package C – 24 + 5 Free (₱5,700)',
-    ];
-}
-
-
-
-    public function edit($id){
-        $member=Member::findOrFail($id);
+    /**
+     * Show the edit form for a member
+     */
+    public function edit($id)
+    {
+        $member = Member::findOrFail($id);
         return view('edit-member', compact('member'));
     }
 
-  public function update(Request $request, $id)
-{
-    $member = Member::findOrFail($id);
-
-    // Validation
-    $request->validate([
-        'full_name' => 'required|string|max:255',
-        'facebook_name' => 'required|string|max:255',
-        'email' => 'required|email|max:255|unique:members,email,' . $id,
-        'membership_package' => 'required|string', // matches store()
-        'id_photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-    ]);
-
-    // Membership packages (same as store)
-    $packages = [
-        // UNLI PASS
-        'unli_1_month' => 30,
-        'unli_3_months' => 90,
-        'unli_6_months' => 180,
-
-        // PROFESSIONAL TRAINING
-        'pt_package_a' => 20,
-        'pt_package_b' => 60,
-        'pt_package_c' => 150,
-
-        // BOXING/MUAY THAI
-        'boxing_package_a' => 20,
-        'boxing_package_b' => 60,
-        'boxing_package_c' => 150,
-    ];
-
-    // Recalculate membership dates if package changes
-    if ($request->membership_package !== $member->membership_type) {
-        $validDays = $packages[$request->membership_package] ?? 30; // fallback 30 days
-        $member->start_date = Carbon::today();
-        $member->end_date = Carbon::today()->addDays($validDays);
-        $member->valid_days = $validDays;
-        $member->membership_type = $request->membership_package;
-    }
-
-    // Update ID photo if new file uploaded
-    if ($request->hasFile('id_photo')) {
-        if ($member->id_photo && Storage::disk('public')->exists($member->id_photo)) {
-            Storage::disk('public')->delete($member->id_photo);
-        }
-        $member->id_photo = $request->file('id_photo')->store('id_photos', 'public');
-    }
-
-    // Update main fields
-    $member->full_name = $request->full_name;
-    $member->facebook_name = $request->facebook_name;
-    $member->email = $request->email;
-
-    // Save changes
-    $member->save();
-
-    return redirect()
-        ->route('members.show', $member->id)
-        ->with('status', 'Member updated successfully!');
-}
-
-
-
     /**
-     * Remove the member from storage.
+     * Update member
      */
-    public function destroy($id)
+    public function update(Request $request, $id)
     {
         $member = Member::findOrFail($id);
 
-        // delete photo from storage
-        if ($member->id_photo && Storage::disk('public')->exists($member->id_photo)) {
-            Storage::disk('public')->delete($member->id_photo);
+        $request->validate([
+            'full_name' => 'required|string',
+            'facebook_name' => 'required|string',
+            'email' => 'required|email|unique:members,email,' . $member->id,
+            'membership_package' => 'required|array|min:1|max:2',
+            'membership_package.*' => 'string',
+            'id_photo' => 'nullable|image',
+        ]);
+
+        $packages = [
+            'unli_1_month' => 30,
+            'unli_3_months' => 90,
+            'unli_6_months' => 180,
+            'pt_package_a' => 20,
+            'pt_package_b' => 60,
+            'pt_package_c' => 150,
+            'boxing_package_a' => 20,
+            'boxing_package_b' => 60,
+            'boxing_package_c' => 150,
+        ];
+
+        $selected = $request->membership_package;
+        $mainMembership = $selected[0];
+        $additionalMembership = $selected[1] ?? null;
+
+        $validDays = $packages[$mainMembership];
+        $startDate = Carbon::today();
+
+        if (str_starts_with($mainMembership, 'unli_')) {
+            $endDate = $startDate->copy()->addMonthNoOverflow()->endOfDay();
+        } else {
+            $endDate = $startDate->copy()->addDays($validDays)->endOfDay();
         }
 
-        // delete record
-        $member->delete();
+        // Update photo if uploaded
+        if ($request->hasFile('id_photo')) {
+            if ($member->id_photo) {
+                Storage::disk('public')->delete($member->id_photo);
+            }
+            $member->id_photo = $request->file('id_photo')->store('id_photos', 'public');
+        }
 
-        return redirect()->route('admin.dashboard')
-                         ->with('success', 'Member deleted successfully!');
+        $member->update([
+            'full_name' => $request->full_name,
+            'facebook_name' => $request->facebook_name,
+            'email' => $request->email,
+            'membership_type' => $mainMembership,
+            'additional_membership' => $additionalMembership,
+            'valid_days' => $validDays,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+        ]);
+
+        return redirect()->route('members.edit', $member->id)
+            ->with('status', 'Member updated successfully!');
     }
-
-
-
-
 }
