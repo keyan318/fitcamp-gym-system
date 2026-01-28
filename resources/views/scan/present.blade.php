@@ -33,6 +33,7 @@ body {
 /* ===== CARD ===== */
 .card {
     background: var(--card);
+    border: 2px;
     border-radius: 20px;
     width: 360px;
     padding: 35px 25px;
@@ -53,7 +54,7 @@ body {
     height: 130px;
     border-radius: 50%;
     object-fit: cover;
-    border: 4px solid var(--accent);
+    border: 4px solid;
     margin-bottom: 15px;
 }
 
@@ -89,10 +90,10 @@ h2 {
     color: var(--muted);
 }
 
-/* ===== BUTTONS ===== */
+/* ===== BUTTON ===== */
 a.button {
     display: inline-block;
-    margin-top: 15px;
+    margin-top: 20px;
     background: var(--accent);
     color: #000;
     padding: 12px 20px;
@@ -115,20 +116,10 @@ a.button:hover {
 </head>
 <body>
 
-@php
-    use Illuminate\Support\Facades\Storage;
-
-    $photoUrl = $member->id_photo
-        ? (Storage::disk('public')->exists($member->id_photo)
-            ? asset('storage/' . $member->id_photo)
-            : asset('images/default.png'))
-        : asset('images/default.png');
-@endphp
-
 <div class="card animate__animated animate__zoomIn">
 
     <!-- Member Photo -->
-    <img src="{{ $photoUrl }}"
+    <img src="{{ asset('storage/' . $member->id_photo) }}"
          alt="Member Photo"
          class="photo">
 
@@ -139,13 +130,13 @@ a.button:hover {
 
     <!-- Timestamp -->
     <div class="timestamp">
-        Recorded on {{ now()->format('M d, Y') }} at {{ now()->format('h:i A') }}
+        Recorded on {{ now()->format('M d, Y') }}
     </div>
 
     <!-- View Attendance Button -->
     <a href="{{ route('attendance.calendar', ['member' => $member->id]) }}" class="button">View Attendance</a>
 
-    <!-- Scan Another Button -->
+     <!-- Scan Another Button -->
     <a href="{{ route('scan.qr') }}" class="button">Scan Another QR</a>
 
 </div>

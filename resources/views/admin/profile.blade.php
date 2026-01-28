@@ -34,6 +34,32 @@
             text-align: center;
         }
 
+        /* ===== TOP BAR ===== */
+        .top-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            background: #000;
+            padding: 10px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .search-input,
+        .filter-select {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #f8f6f0ff;
+            background-color: #111;
+            color: var(--text);
+            flex: 1 1 150px;
+            font-size: 14px;
+        }
+
         .table-wrapper {
             width: 100%;
             overflow-x: auto;
@@ -52,22 +78,17 @@
             padding: 10px;
             text-align: left;
             white-space: nowrap;
-            color: #fff; /* force text to white */
         }
 
         th {
             background: #000;
+            color: var(--accent);
             font-size: 16px;
         }
 
         td {
             border-top: 1px solid #333;
             font-size: 15px;
-        }
-
-        td a {
-            color: #fff; /* ensure links are white */
-            text-decoration: none;
         }
 
         .id-photo {
@@ -94,6 +115,48 @@
             margin: auto;
         }
 
+        .stats-boxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: #000;
+            padding: 15px;
+            text-align: center;
+            border-radius: 12px;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        /* ===== LOGOUT MATCH DASHBOARD STYLE ===== */
+        .logout {
+            margin-top: auto;
+        }
+
+        .logout button {
+            width: 100%;
+            background: transparent;
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .logout button:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        /* ===== HAMBURGER & SIDE MENU ===== */
         .hamburger {
             position: fixed;
             top: 15px;
@@ -134,38 +197,21 @@
             margin-bottom: 15px;
         }
 
-        .logout button {
-            width: 100%;
-            background: transparent;
-            border: 2px solid var(--danger);
-            color: var(--danger);
-            padding: 10px;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-        }
 
-        .logout button:hover {
-            background: var(--danger);
-            color: #fff;
-        }
     </style>
 </head>
 
 <body>
 
-@php
-    use Illuminate\Support\Facades\Storage;
-@endphp
-
 <button class="hamburger" onclick="toggleMenu()">☰</button>
 
 <div class="side-menu" id="sideMenu">
-    <a href="{{ route('admin.mainDashboard') }}">Dashboard</a>
+    <a href="{{route('admin.mainDashboard')}}">Dashboard</a>
     <a href="{{ route('admin.profile') }}">Member profile</a>
     <a href="{{ route('attendance.index') }}">Attendance</a>
     <a href="{{ route('scan.qr') }}">Scan QR Code</a>
 
+    <!-- LOGOUT -->
     <form method="POST" action="{{ route('admin.logout') }}" class="logout">
         @csrf
         <button type="submit">Logout</button>
@@ -193,25 +239,19 @@
     @foreach ($members->sortBy('member_id') as $member)
     <tr class="clickable-row" data-href="{{ route('members.show', $member->id) }}">
         <td>
-            @php
-                $photoUrl = $member->id_photo
-                    ? (Storage::disk('public')->exists($member->id_photo)
-                        ? asset('storage/' . $member->id_photo)
-                        : asset('images/default.png'))
-                    : asset('images/default.png');
-            @endphp
-            <img src="{{ $photoUrl }}" class="id-photo" alt="ID Photo">
+            <img src="{{ $member->id_photo
+                ? asset('storage/'.$member->id_photo)
+                : asset('images/default.png') }}"
+                 class="id-photo">
         </td>
         <td>{{ $member->member_id }}</td>
         <td>{{ $member->full_name }}</td>
         <td>{{ $member->facebook_name }}</td>
         <td>{{ $member->email }}</td>
         <td>{{ $membershipLabels[$member->membership_type] ?? $member->membership_type }}</td>
-        <td>
-            {{ $member->additional_membership
+        <td>{{ $member->additional_membership
                 ? ($membershipLabels[$member->additional_membership] ?? $member->additional_membership)
-                : '—' }}
-        </td>
+                : '—' }}</td>
     </tr>
     @endforeach
 </table>
