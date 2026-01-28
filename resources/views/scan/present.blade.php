@@ -115,10 +115,20 @@ a.button:hover {
 </head>
 <body>
 
+@php
+    use Illuminate\Support\Facades\Storage;
+
+    $photoUrl = $member->id_photo
+        ? (Storage::disk('public')->exists($member->id_photo)
+            ? asset('storage/' . $member->id_photo)
+            : asset('images/default.png'))
+        : asset('images/default.png');
+@endphp
+
 <div class="card animate__animated animate__zoomIn">
 
     <!-- Member Photo -->
-    <img src="{{ $member->id_photo ? Storage::disk('s3')->url($member->id_photo) : asset('images/default.png') }}"
+    <img src="{{ $photoUrl }}"
          alt="Member Photo"
          class="photo">
 

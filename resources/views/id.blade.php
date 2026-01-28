@@ -122,14 +122,23 @@
 
 <body>
 
+@php
+    use Illuminate\Support\Facades\Storage;
+
+    $photoUrl = $member->id_photo
+        ? (Storage::disk('public')->exists($member->id_photo)
+            ? asset('storage/' . $member->id_photo)
+            : asset('images/default.png'))
+        : asset('images/default.png');
+@endphp
+
 <div class="logo-container">
     <img src="{{ asset('images/fitcamp-logo.png') }}" alt="FitCamp Logo">
 </div>
 
-<a href="{{ route('admin.profile') }}" class="back-btn">⬅</a>
+<a href="{{ route('admin.profile') }}" class="back-btn">⬅ Back</a>
 
 <!-- ================= ID CARD ================= -->
-
 <div class="id-card" id="id-card">
 
     <!-- Logo -->
@@ -139,10 +148,7 @@
 
     <!-- Center -->
     <div class="id-content">
-        <img class="id-photo"
-             src="{{ $member->id_photo ? Storage::disk('s3')->url($member->id_photo) : asset('images/default.png') }}"
-             alt="ID Photo">
-
+        <img class="id-photo" src="{{ $photoUrl }}" alt="ID Photo">
         <div class="member-name">{{ $member->full_name }}</div>
     </div>
 
@@ -156,7 +162,6 @@
 <button class="download-btn" onclick="downloadIDCard()">Download ID</button>
 
 <!-- ================= SCRIPTS ================= -->
-
 <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 

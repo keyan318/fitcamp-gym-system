@@ -52,17 +52,22 @@
             padding: 10px;
             text-align: left;
             white-space: nowrap;
+            color: #fff; /* force text to white */
         }
 
         th {
             background: #000;
-            color: var(--accent);
             font-size: 16px;
         }
 
         td {
             border-top: 1px solid #333;
             font-size: 15px;
+        }
+
+        td a {
+            color: #fff; /* ensure links are white */
+            text-decoration: none;
         }
 
         .id-photo {
@@ -188,12 +193,14 @@
     @foreach ($members->sortBy('member_id') as $member)
     <tr class="clickable-row" data-href="{{ route('members.show', $member->id) }}">
         <td>
-            <img
-                src="{{ $member->id_photo
-                    ? Storage::url($member->id_photo)
-                    : asset('images/default.png') }}"
-                class="id-photo"
-            >
+            @php
+                $photoUrl = $member->id_photo
+                    ? (Storage::disk('public')->exists($member->id_photo)
+                        ? asset('storage/' . $member->id_photo)
+                        : asset('images/default.png'))
+                    : asset('images/default.png');
+            @endphp
+            <img src="{{ $photoUrl }}" class="id-photo" alt="ID Photo">
         </td>
         <td>{{ $member->member_id }}</td>
         <td>{{ $member->full_name }}</td>
