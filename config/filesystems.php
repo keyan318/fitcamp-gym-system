@@ -39,13 +39,13 @@ return [
         ],
 
         'public' => [
-            'driver' => 'local',
-            'root' => public_path('storage'),
-            'url' => env('APP_URL').'/storage',
-            'visibility' => 'public',
-            'throw' => false,
-            'report' => false,
-        ],
+    'driver' => 'local',
+    'root' => public_path('uploads/members'), // Physical path: public/uploads/members
+    'url' => env('APP_URL').'/uploads/members', // URL path: yourdomain.com/uploads/members
+    'visibility' => 'public',
+    'throw' => false,
+    'report' => false,
+],
 
         's3' => [
             'driver' => 's3',

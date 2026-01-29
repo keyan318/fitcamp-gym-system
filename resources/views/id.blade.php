@@ -142,13 +142,12 @@
 
     <!-- Center -->
     <div class="id-content">
-        <img class="id-photo"
-             src="{{ $member->id_photo ? asset('storage/' . $member->id_photo) : asset('images/default.png') }}"
-             alt="ID Photo">
+    <img class="id-photo"
+         src="{{ $member->id_photo ? asset('uploads/members/' . $member->id_photo) : asset('images/default.png') }}"
+         alt="ID Photo">
 
-        <div class="member-name">{{ $member->full_name }}</div>
-
-    </div>
+    <div class="member-name">{{ $member->full_name }}</div>
+</div>
 
     <!-- QR -->
     <div class="id-qr">

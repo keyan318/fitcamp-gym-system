@@ -239,10 +239,12 @@
     @foreach ($members->sortBy('member_id') as $member)
     <tr class="clickable-row" data-href="{{ route('members.show', $member->id) }}">
         <td>
-            <img src="{{ $member->id_photo
-                ? asset('storage/'.$member->id_photo)
+            <td>
+    <img src="{{ $member->id_photo
+                ? asset('uploads/members/'.$member->id_photo)
                 : asset('images/default.png') }}"
-                 class="id-photo">
+         class="id-photo">
+</td>
         </td>
         <td>{{ $member->member_id }}</td>
         <td>{{ $member->full_name }}</td>

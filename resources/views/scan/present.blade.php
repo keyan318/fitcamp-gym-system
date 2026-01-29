@@ -118,10 +118,9 @@ a.button:hover {
 
 <div class="card animate__animated animate__zoomIn">
 
-    <!-- Member Photo -->
-    <img src="{{ asset('storage/' . $member->id_photo) }}"
-         alt="Member Photo"
-         class="photo">
+    <img src="{{ $member->id_photo ? asset('uploads/members/' . $member->id_photo) : asset('images/default.png') }}"
+     alt="Member Photo"
+     class="photo">
 
     <!-- Status -->
     <div class="status">

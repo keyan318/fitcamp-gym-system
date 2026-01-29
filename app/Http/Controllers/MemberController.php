@@ -82,7 +82,10 @@ class MemberController extends Controller
             'id_photo' => 'required|image',
         ]);
 
-        $id_photo_path = $request->file('id_photo')->store('id_photos', 'public');
+      $file = $request->file('id_photo');
+      $filename = time() . '_' . $file->getClientOriginalName();
+      $file->move(public_path('storage/id_photos'), $filename);
+      $id_photo_path = 'id_photos/' . $filename;
 
         // GENERATE MEMBER ID
         $lastMember = Member::orderBy('id', 'desc')->first();
@@ -183,12 +186,12 @@ class MemberController extends Controller
         }
 
         // Update photo if uploaded
-        if ($request->hasFile('id_photo')) {
-            if ($member->id_photo) {
-                Storage::disk('public')->delete($member->id_photo);
-            }
-            $member->id_photo = $request->file('id_photo')->store('id_photos', 'public');
-        }
+        $file = $request->file('id_photo');
+    $filename = time() . '_' . $file->getClientOriginalName();
+    $file->move(public_path('storage/id_photos'), $filename);
+
+    $member->id_photo = 'id_photos/' . $filename;
+
 
         $member->update([
             'full_name' => $request->full_name,
