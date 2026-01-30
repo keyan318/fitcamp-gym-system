@@ -1,4 +1,3 @@
-<!-- Member Profile Blade Updated -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -67,7 +66,6 @@
             font-size: 15px;
         }
 
-        /* CENTER PHOTO COLUMN */
         td.photo-col {
             text-align: center;
         }
@@ -96,7 +94,6 @@
             margin: auto;
         }
 
-        /* ===== HAMBURGER & SIDE MENU ===== */
         .hamburger {
             position: fixed;
             top: 15px;
@@ -175,12 +172,13 @@
 </div>
 
 <div class="logo-container">
-    <img src="{{ asset('images/fitcamp-logo.png') }}">
+    <img src="{{ asset('images/fitcamp-logo.png') }}" alt="FitCamp Logo">
 </div>
 
-<h1>Member profile</h1>
+<h1>Member Profile</h1>
 
 <div class="table-wrapper">
+@if(isset($members) && count($members) > 0)
 <table>
     <thead>
         <tr>
@@ -201,7 +199,9 @@
 
             <td class="photo-col">
                 <img
-                    src="{{ $member->id_photo ? Storage::url($member->id_photo) : asset('images/default.png') }}"
+                    src="{{ $member->id_photo && Storage::exists($member->id_photo)
+                            ? Storage::url($member->id_photo)
+                            : asset('images/default.png') }}"
                     class="id-photo"
                     alt="ID Photo">
             </td>
@@ -220,6 +220,9 @@
     @endforeach
     </tbody>
 </table>
+@else
+<p style="text-align:center; color:var(--muted);">No members found.</p>
+@endif
 </div>
 
 <script>
