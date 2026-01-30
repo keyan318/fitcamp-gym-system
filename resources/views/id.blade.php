@@ -140,7 +140,7 @@
     <!-- Center -->
     <div class="id-content">
         <img class="id-photo"
-             src="{{ $member->id_photo ? Storage::disk('s3')->url($member->id_photo) : asset('images/default.png') }}"
+             src="{{ $member->id_photo ? Storage::url($member->id_photo) : asset('images/default.png') }}"
              alt="ID Photo">
 
         <div class="member-name">{{ $member->full_name }}</div>

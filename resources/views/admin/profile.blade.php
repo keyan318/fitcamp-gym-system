@@ -201,9 +201,7 @@
 
             <td class="photo-col">
                 <img
-                    src="{{ $member->id_photo
-                        ? Storage::disk('s3')->url($member->id_photo)
-                        : asset('images/default.png') }}"
+                    src="{{ $member->id_photo ? Storage::url($member->id_photo) : asset('images/default.png') }}"
                     class="id-photo"
                     alt="ID Photo">
             </td>

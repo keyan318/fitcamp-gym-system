@@ -33,7 +33,6 @@ body {
 /* ===== CARD ===== */
 .card {
     background: var(--card);
-    border: 2px;
     border-radius: 20px;
     width: 360px;
     padding: 35px 25px;
@@ -118,7 +117,7 @@ a.button:hover {
 
 <div class="card animate__animated animate__zoomIn">
 
-    <img src="{{ $member->id_photo ? Storage::disk('s3')->url($member->id_photo) : asset('images/default.png') }}"
+    <img src="{{ $member->id_photo ? Storage::url($member->id_photo) : asset('images/default.png') }}"
          alt="Member Photo"
          class="photo">
 

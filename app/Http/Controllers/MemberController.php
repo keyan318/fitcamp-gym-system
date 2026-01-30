@@ -10,12 +10,13 @@ use Carbon\Carbon;
 class MemberController extends Controller
 {
     /**
-     * Admin Dashboard
+     * Display Member Dashboard / List
      */
     public function index(Request $request)
     {
         $query = Member::query();
 
+        // Search by full_name or facebook_name
         if ($request->search) {
             $query->where(function ($q) use ($request) {
                 $q->where('full_name', 'like', '%' . $request->search . '%')
@@ -23,6 +24,7 @@ class MemberController extends Controller
             });
         }
 
+        // Filter by status
         if ($request->filter && $request->filter !== 'all') {
             $query->where('status', $request->filter);
         }
@@ -33,6 +35,9 @@ class MemberController extends Controller
         return view('dashboard', compact('members', 'membershipLabels'));
     }
 
+    /**
+     * Membership Labels
+     */
     private function membershipLabels()
     {
         return [
@@ -49,7 +54,7 @@ class MemberController extends Controller
     }
 
     /**
-     * Store member
+     * Store a New Member
      */
     public function store(Request $request)
     {
@@ -62,18 +67,20 @@ class MemberController extends Controller
             'id_photo' => 'required|image',
         ]);
 
-        /** ✅ S3 UPLOAD */
+        // Upload photo
         $file = $request->file('id_photo');
         $filename = time() . '_' . $file->getClientOriginalName();
-        $id_photo_path = 'id_photos/' . $filename;
+        $path = 'id_photos/' . $filename;
 
-        Storage::disk('s3')->put($id_photo_path, file_get_contents($file), 'public');
+        // Store using default disk (local or s3)
+        Storage::put($path, file_get_contents($file));
 
-        // MEMBER ID
+        // Generate Member ID
         $lastMember = Member::orderBy('id', 'desc')->first();
         $lastNumber = $lastMember ? intval(substr($lastMember->member_id, 4)) : 0;
         $memberID = 'FIT-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
 
+        // Membership days mapping
         $packages = [
             'unli_1_month' => 30,
             'unli_3_months' => 90,
@@ -92,11 +99,11 @@ class MemberController extends Controller
 
         $validDays = $packages[$mainMembership];
         $startDate = Carbon::today();
-
         $endDate = str_starts_with($mainMembership, 'unli_')
             ? $startDate->copy()->addMonthNoOverflow()->endOfDay()
             : $startDate->copy()->addDays($validDays)->endOfDay();
 
+        // Create Member
         Member::create([
             'member_id' => $memberID,
             'full_name' => $request->full_name,
@@ -107,7 +114,7 @@ class MemberController extends Controller
             'valid_days' => $validDays,
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'id_photo' => $id_photo_path, // ✅ S3 PATH
+            'id_photo' => $path,
             'status' => 'Active',
         ]);
 
@@ -116,7 +123,7 @@ class MemberController extends Controller
     }
 
     /**
-     * Update member
+     * Update Existing Member
      */
     public function update(Request $request, $id)
     {
@@ -131,13 +138,13 @@ class MemberController extends Controller
             'id_photo' => 'nullable|image',
         ]);
 
-        // ✅ UPDATE PHOTO ONLY IF EXISTS
+        // Upload new photo if exists
         if ($request->hasFile('id_photo')) {
             $file = $request->file('id_photo');
             $filename = time() . '_' . $file->getClientOriginalName();
             $path = 'id_photos/' . $filename;
 
-            Storage::disk('s3')->put($path, file_get_contents($file), 'public');
+            Storage::put($path, file_get_contents($file));
             $member->id_photo = $path;
         }
 
