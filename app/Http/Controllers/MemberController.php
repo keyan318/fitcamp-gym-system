@@ -16,7 +16,6 @@ class MemberController extends Controller
     {
         $query = Member::query();
 
-        // 🔍 SEARCH
         if ($request->search) {
             $query->where(function ($q) use ($request) {
                 $q->where('full_name', 'like', '%' . $request->search . '%')
@@ -24,19 +23,17 @@ class MemberController extends Controller
             });
         }
 
-        // 🎯 FILTER
         if ($request->filter && $request->filter !== 'all') {
             $query->where('status', $request->filter);
         }
 
-        // ✅ ORDER LIKE ATTENDANCE (FIT-0001 → FIT-0002 → LAST)
         $members = $query->orderBy('member_id', 'asc')->get();
-
         $membershipLabels = $this->membershipLabels();
 
-
         return view('dashboard', compact('members', 'membershipLabels'));
-    }private function membershipLabels()
+    }
+
+    private function membershipLabels()
     {
         return [
             'unli_1_month' => '1 Month – ₱600',
@@ -49,23 +46,6 @@ class MemberController extends Controller
             'boxing_package_b' => 'Boxing Package B – 11 + 1 Free (₱2,700)',
             'boxing_package_c' => 'Boxing Package C – 24 + 5 Free (₱5,700)',
         ];
-    }
-
-    /**
-     * Show registration form
-     */
-    public function create()
-    {
-        return view('member-register');
-    }
-
-    /**
-     * Show ID
-     */
-    public function show($id)
-    {
-        $member = Member::findOrFail($id);
-        return view('id', compact('member'));
     }
 
     /**
@@ -82,12 +62,14 @@ class MemberController extends Controller
             'id_photo' => 'required|image',
         ]);
 
-      $file = $request->file('id_photo');
-      $filename = time() . '_' . $file->getClientOriginalName();
-      $file->move(public_path('storage/id_photos'), $filename);
-      $id_photo_path = 'id_photos/' . $filename;
+        /** ✅ S3 UPLOAD */
+        $file = $request->file('id_photo');
+        $filename = time() . '_' . $file->getClientOriginalName();
+        $id_photo_path = 'id_photos/' . $filename;
 
-        // GENERATE MEMBER ID
+        Storage::disk('s3')->put($id_photo_path, file_get_contents($file), 'public');
+
+        // MEMBER ID
         $lastMember = Member::orderBy('id', 'desc')->first();
         $lastNumber = $lastMember ? intval(substr($lastMember->member_id, 4)) : 0;
         $memberID = 'FIT-' . str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
@@ -111,11 +93,9 @@ class MemberController extends Controller
         $validDays = $packages[$mainMembership];
         $startDate = Carbon::today();
 
-        if (str_starts_with($mainMembership, 'unli_')) {
-            $endDate = $startDate->copy()->addMonthNoOverflow()->endOfDay();
-        } else {
-            $endDate = $startDate->copy()->addDays($validDays)->endOfDay();
-        }
+        $endDate = str_starts_with($mainMembership, 'unli_')
+            ? $startDate->copy()->addMonthNoOverflow()->endOfDay()
+            : $startDate->copy()->addDays($validDays)->endOfDay();
 
         Member::create([
             'member_id' => $memberID,
@@ -127,21 +107,12 @@ class MemberController extends Controller
             'valid_days' => $validDays,
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'id_photo' => $id_photo_path,
+            'id_photo' => $id_photo_path, // ✅ S3 PATH
             'status' => 'Active',
         ]);
 
         return redirect()->route('member.success')
             ->with('status', 'You have successfully registered!');
-    }
-
-    /**
-     * Show the edit form for a member
-     */
-    public function edit($id)
-    {
-        $member = Member::findOrFail($id);
-        return view('edit-member', compact('member'));
     }
 
     /**
@@ -160,48 +131,20 @@ class MemberController extends Controller
             'id_photo' => 'nullable|image',
         ]);
 
-        $packages = [
-            'unli_1_month' => 30,
-            'unli_3_months' => 90,
-            'unli_6_months' => 180,
-            'pt_package_a' => 20,
-            'pt_package_b' => 60,
-            'pt_package_c' => 150,
-            'boxing_package_a' => 20,
-            'boxing_package_b' => 60,
-            'boxing_package_c' => 150,
-        ];
+        // ✅ UPDATE PHOTO ONLY IF EXISTS
+        if ($request->hasFile('id_photo')) {
+            $file = $request->file('id_photo');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = 'id_photos/' . $filename;
 
-        $selected = $request->membership_package;
-        $mainMembership = $selected[0];
-        $additionalMembership = $selected[1] ?? null;
-
-        $validDays = $packages[$mainMembership];
-        $startDate = Carbon::today();
-
-        if (str_starts_with($mainMembership, 'unli_')) {
-            $endDate = $startDate->copy()->addMonthNoOverflow()->endOfDay();
-        } else {
-            $endDate = $startDate->copy()->addDays($validDays)->endOfDay();
+            Storage::disk('s3')->put($path, file_get_contents($file), 'public');
+            $member->id_photo = $path;
         }
-
-        // Update photo if uploaded
-        $file = $request->file('id_photo');
-    $filename = time() . '_' . $file->getClientOriginalName();
-    $file->move(public_path('storage/id_photos'), $filename);
-
-    $member->id_photo = 'id_photos/' . $filename;
-
 
         $member->update([
             'full_name' => $request->full_name,
             'facebook_name' => $request->facebook_name,
             'email' => $request->email,
-            'membership_type' => $mainMembership,
-            'additional_membership' => $additionalMembership,
-            'valid_days' => $validDays,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
         ]);
 
         return redirect()->route('members.edit', $member->id)

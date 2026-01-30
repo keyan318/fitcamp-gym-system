@@ -63,14 +63,13 @@
 
         /* Center Content */
         .id-content {
-         position: absolute;
-         top: 90px;
-         left: 50%;
-         transform: translateX(-50%);
-         text-align: center;
-        width: 100%;
-       }
-
+            position: absolute;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            width: 100%;
+        }
 
         .id-photo {
             width: 170px;
@@ -86,8 +85,6 @@
             font-weight: bold;
             margin: 6px 0;
         }
-
-
 
         /* QR Code */
         .id-qr {
@@ -142,12 +139,12 @@
 
     <!-- Center -->
     <div class="id-content">
-    <img class="id-photo"
-         src="{{ $member->id_photo ? asset('uploads/members/' . $member->id_photo) : asset('images/default.png') }}"
-         alt="ID Photo">
+        <img class="id-photo"
+             src="{{ $member->id_photo ? Storage::disk('s3')->url($member->id_photo) : asset('images/default.png') }}"
+             alt="ID Photo">
 
-    <div class="member-name">{{ $member->full_name }}</div>
-</div>
+        <div class="member-name">{{ $member->full_name }}</div>
+    </div>
 
     <!-- QR -->
     <div class="id-qr">
@@ -183,8 +180,6 @@
         });
     }
 </script>
-
-
 
 </body>
 </html>
