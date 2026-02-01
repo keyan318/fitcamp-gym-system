@@ -54,6 +54,33 @@ class MemberController extends Controller
     }
 
     /**
+     * Show the registration form
+     */
+    public function create()
+    {
+        return view('member-register');
+    }
+
+    /**
+     * Show member digital ID
+     */
+    public function show($id)
+    {
+        $member = Member::findOrFail($id);
+        return view('id', compact('member'));
+    }
+
+    /**
+     * Show edit form for member
+     */
+    public function edit($id)
+    {
+        $member = Member::findOrFail($id);
+        $membershipLabels = $this->membershipLabels();
+        return view('edit-member', compact('member', 'membershipLabels'));
+    }
+
+    /**
      * Store a New Member
      */
     public function store(Request $request)
@@ -64,16 +91,16 @@ class MemberController extends Controller
             'email' => 'required|email|unique:members,email',
             'membership_package' => 'required|array|min:1|max:2',
             'membership_package.*' => 'string',
-            'id_photo' => 'required|image',
+            'id_photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // Upload photo
+        // Upload photo to Supabase S3
         $file = $request->file('id_photo');
-        $filename = time() . '_' . $file->getClientOriginalName();
+        $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
         $path = 'id_photos/' . $filename;
 
-        // Store using default disk (local or s3)
-        Storage::put($path, file_get_contents($file));
+        // Upload to S3 (Supabase) - Use putFileAs for cleaner upload
+        Storage::disk('s3')->putFileAs('id_photos', $file, $filename, 'public');
 
         // Generate Member ID
         $lastMember = Member::orderBy('id', 'desc')->first();
@@ -135,16 +162,22 @@ class MemberController extends Controller
             'email' => 'required|email|unique:members,email,' . $member->id,
             'membership_package' => 'required|array|min:1|max:2',
             'membership_package.*' => 'string',
-            'id_photo' => 'nullable|image',
+            'id_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // Upload new photo if exists
+        // Upload new photo if exists (Supabase S3)
         if ($request->hasFile('id_photo')) {
+            // Delete old photo from Supabase
+            if ($member->id_photo && Storage::disk('s3')->exists($member->id_photo)) {
+                Storage::disk('s3')->delete($member->id_photo);
+            }
+
             $file = $request->file('id_photo');
-            $filename = time() . '_' . $file->getClientOriginalName();
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
             $path = 'id_photos/' . $filename;
 
-            Storage::put($path, file_get_contents($file));
+            // Upload to S3 (Supabase)
+            Storage::disk('s3')->putFileAs('id_photos', $file, $filename, 'public');
             $member->id_photo = $path;
         }
 
@@ -156,5 +189,38 @@ class MemberController extends Controller
 
         return redirect()->route('members.edit', $member->id)
             ->with('status', 'Member updated successfully!');
+    }
+
+    /**
+     * Delete member
+     */
+    public function destroy($id)
+    {
+        $member = Member::findOrFail($id);
+
+        // Delete photo from Supabase S3
+        if ($member->id_photo && Storage::disk('s3')->exists($member->id_photo)) {
+            Storage::disk('s3')->delete($member->id_photo);
+        }
+
+        // Delete member record
+        $member->delete();
+
+        return redirect()->route('attendance.index')
+            ->with('status', 'Member deleted successfully!');
+    }
+
+    /**
+     * Get public URL for member photo
+     */
+    public static function getPhotoUrl($path)
+    {
+        if (!$path) {
+            return asset('images/default.png');
+        }
+
+        // Build the full public URL manually
+        $baseUrl = config('filesystems.disks.s3.url');
+        return $baseUrl . '/' . $path;
     }
 }

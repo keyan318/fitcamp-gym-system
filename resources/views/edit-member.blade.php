@@ -154,7 +154,20 @@ button {
 
     <!-- CURRENT PHOTO -->
     <div class="current-photo">
-        <img src="{{ asset('storage/' . $member->id_photo) }}" alt="ID Photo">
+       @if($member->id_photo)
+                @php
+                    // Build URL manually to avoid IDE errors
+                    $photoUrl = config('filesystems.disks.s3.url') . '/' . $member->id_photo;
+                    $defaultPhoto = asset('images/default.png');
+                @endphp
+                <img
+                    src="{{ $photoUrl }}"
+                    class="id-photo"
+                    alt="{{ $member->full_name }}"
+                    onerror="this.onerror=null; this.src='{{ $defaultPhoto }}';">
+            @else
+                <div class="photo-error">No Photo</div>
+            @endif
     </div>
 
     <form method="POST"
@@ -252,6 +265,7 @@ button {
         </div>
     @endif
 </div>
+
 <script>
 const checkboxes = document.querySelectorAll('input[name="membership_package[]"]');
 checkboxes.forEach(box => {

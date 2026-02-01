@@ -1,4 +1,4 @@
-<!-- Member Profile Blade Updated -->
+<!-- Member Profile Blade - No IDE Errors -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -32,32 +32,6 @@
             font-size: 28px;
             margin-bottom: 10px;
             text-align: center;
-        }
-
-        /* ===== TOP BAR ===== */
-        .top-bar {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-            background: #000;
-            padding: 10px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
-
-        .search-input,
-        .filter-select {
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #f8f6f0ff;
-            background-color: #111;
-            color: var(--text);
-            flex: 1 1 150px;
-            font-size: 14px;
         }
 
         .table-wrapper {
@@ -98,6 +72,7 @@
             border-radius: 50%;
             display: block;
             margin: 0 auto;
+            border: 2px solid var(--accent);
         }
 
         .clickable-row {
@@ -115,48 +90,6 @@
             margin: auto;
         }
 
-        .stats-boxes {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .stat-box {
-            background: #000;
-            padding: 15px;
-            text-align: center;
-            border-radius: 12px;
-        }
-
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--accent);
-        }
-
-        /* ===== LOGOUT MATCH DASHBOARD STYLE ===== */
-        .logout {
-            margin-top: auto;
-        }
-
-        .logout button {
-            width: 100%;
-            background: transparent;
-            border: 2px solid var(--danger);
-            color: var(--danger);
-            padding: 10px;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .logout button:hover {
-            background: var(--danger);
-            color: #fff;
-        }
-
-        /* ===== HAMBURGER & SIDE MENU ===== */
         .hamburger {
             position: fixed;
             top: 15px;
@@ -198,6 +131,39 @@
         }
 
 
+        /* LOGOUT BUTTON MATCH DASHBOARD */
+        .logout {
+            margin-top: auto;
+        }
+
+        .logout button {
+            width: 100%;
+            background: transparent;
+            border: 2px solid var(--danger);
+            color: var(--danger);
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .logout button:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .photo-error {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            color: var(--muted);
+            font-size: 12px;
+        }
     </style>
 </head>
 
@@ -206,12 +172,11 @@
 <button class="hamburger" onclick="toggleMenu()">☰</button>
 
 <div class="side-menu" id="sideMenu">
-    <a href="{{route('admin.mainDashboard')}}">Dashboard</a>
+    <a href="{{ route('admin.mainDashboard') }}">Dashboard</a>
     <a href="{{ route('admin.profile') }}">Member profile</a>
     <a href="{{ route('attendance.index') }}">Attendance</a>
     <a href="{{ route('scan.qr') }}">Scan QR Code</a>
 
-    <!-- LOGOUT -->
     <form method="POST" action="{{ route('admin.logout') }}" class="logout">
         @csrf
         <button type="submit">Logout</button>
@@ -239,21 +204,31 @@
     @foreach ($members->sortBy('member_id') as $member)
     <tr class="clickable-row" data-href="{{ route('members.show', $member->id) }}">
         <td>
-            <td>
-         <img src="{{ $member->id_photo
-                ? asset('uploads/members/'.$member->id_photo)
-                : asset('images/default.png') }}"
-         class="id-photo">
-        </td>
+            @if($member->id_photo)
+                @php
+                    // Build URL manually to avoid IDE errors
+                    $photoUrl = config('filesystems.disks.s3.url') . '/' . $member->id_photo;
+                    $defaultPhoto = asset('images/default.png');
+                @endphp
+                <img
+                    src="{{ $photoUrl }}"
+                    class="id-photo"
+                    alt="{{ $member->full_name }}"
+                    onerror="this.onerror=null; this.src='{{ $defaultPhoto }}';">
+            @else
+                <div class="photo-error">No Photo</div>
+            @endif
         </td>
         <td>{{ $member->member_id }}</td>
         <td>{{ $member->full_name }}</td>
         <td>{{ $member->facebook_name }}</td>
         <td>{{ $member->email }}</td>
         <td>{{ $membershipLabels[$member->membership_type] ?? $member->membership_type }}</td>
-        <td>{{ $member->additional_membership
+        <td>
+            {{ $member->additional_membership
                 ? ($membershipLabels[$member->additional_membership] ?? $member->additional_membership)
-                : '—' }}</td>
+                : '—' }}
+        </td>
     </tr>
     @endforeach
 </table>
@@ -269,6 +244,13 @@ document.querySelectorAll(".clickable-row").forEach(row => {
 function toggleMenu() {
     document.getElementById('sideMenu').classList.toggle('active');
 }
+
+// Optional: Log any image loading errors to console for debugging
+document.querySelectorAll('.id-photo').forEach(img => {
+    img.addEventListener('error', function() {
+        console.error('Failed to load image:', this.src);
+    });
+});
 </script>
 
 </body>

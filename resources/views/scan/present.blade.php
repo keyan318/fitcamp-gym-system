@@ -53,7 +53,7 @@ body {
     height: 130px;
     border-radius: 50%;
     object-fit: cover;
-    border: 4px solid;
+    border: 4px solid var(--accent);
     margin-bottom: 15px;
 }
 
@@ -117,9 +117,17 @@ a.button:hover {
 
 <div class="card animate__animated animate__zoomIn">
 
-    <img src="{{ $member->id_photo ? Storage::url($member->id_photo) : asset('images/default.png') }}"
+    @php
+        $photoUrl = $member->id_photo 
+            ? config('filesystems.disks.s3.url') . '/' . $member->id_photo
+            : asset('images/default.png');
+        $defaultPhoto = asset('images/default.png');
+    @endphp
+
+    <img src="{{ $photoUrl }}"
          alt="Member Photo"
-         class="photo">
+         class="photo"
+         onerror="this.onerror=null; this.src='{{ $defaultPhoto }}';">
 
     <!-- Status -->
     <div class="status">
